@@ -23,6 +23,7 @@ import (
 	"regexp"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 	. "github.com/pingcap/check"
@@ -462,6 +463,8 @@ func checkErrorCode(c *C, e error, code uint16) {
 func runTestAuth(c *C) {
 	runTests(c, dsn, func(dbt *DBTest) {
 		dbt.mustExec(`CREATE USER 'test'@'%' IDENTIFIED BY '123';`)
+		time.Sleep(3 * time.Second)
+		fmt.Println("xxxxxx")
 	})
 	newDsn := "test:123@tcp(localhost:4001)/test?strict=true"
 	runTests(c, newDsn, func(dbt *DBTest) {

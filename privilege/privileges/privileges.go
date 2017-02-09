@@ -209,6 +209,7 @@ func (p *UserPrivileges) RequestVerification(db, table, column string, priv mysq
 
 // ConnectionVerification implements the Checker interface.
 func (p *UserPrivileges) ConnectionVerification(user, host string, auth, salt []byte) bool {
+	fmt.Printf("debug.............conn %p\n", p.Handle)
 	mysqlPriv := p.Handle.Get()
 	record := mysqlPriv.ConnectionVerification(user, host)
 	if record == nil {

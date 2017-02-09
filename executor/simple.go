@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap/tidb/infoschema"
 	"github.com/pingcap/tidb/model"
 	"github.com/pingcap/tidb/mysql"
+	"github.com/pingcap/tidb/sessionctx"
 	"github.com/pingcap/tidb/sessionctx/variable"
 	"github.com/pingcap/tidb/terror"
 	"github.com/pingcap/tidb/util"
@@ -169,7 +170,17 @@ func (e *SimpleExec) executeCreateUser(s *ast.CreateUserStmt) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
-	return nil
+
+	_, err = e.ctx.(sqlexec.RestrictedSQLExecutor).ExecRestrictedSQL(e.ctx, "COMMIT;")
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Flush privileges.
+	dom := sessionctx.GetDomain(e.ctx)
+	fmt.Printf("debug.............create use flush %p\n", dom.PrivilegeHandle())
+	err = dom.PrivilegeHandle().Update()
+	return errors.Trace(err)
 }
 
 func (e *SimpleExec) executeAlterUser(s *ast.AlterUserStmt) error {

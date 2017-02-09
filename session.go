@@ -715,8 +715,12 @@ func BootstrapSession(store kv.Storage) (*domain.Domain, error) {
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
+
 	dom := sessionctx.GetDomain(se)
 	err = dom.LoadPrivilegeLoop(se)
+	if !se.sessionVars.IsAutocommit() {
+		panic("sdfsdf")
+	}
 
 	return dom, errors.Trace(err)
 }

@@ -14,6 +14,7 @@
 package privileges
 
 import (
+	"fmt"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -22,7 +23,7 @@ import (
 	"github.com/pingcap/tidb/ast"
 	"github.com/pingcap/tidb/context"
 	"github.com/pingcap/tidb/mysql"
-	"github.com/pingcap/tidb/util/sqlexec"
+	// 	"github.com/pingcap/tidb/util/sqlexec"
 	"github.com/pingcap/tidb/util/types"
 )
 
@@ -94,11 +95,13 @@ func (p *MySQLPrivilege) LoadAll(ctx context.Context) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
+
 	return nil
 }
 
 // LoadUserTable loads the mysql.user table from database.
 func (p *MySQLPrivilege) LoadUserTable(ctx context.Context) error {
+	fmt.Println("load user table..........")
 	return p.loadTable(ctx, "select * from mysql.user order by host, user;", p.decodeUserTableRow)
 }
 
@@ -109,20 +112,25 @@ func (p *MySQLPrivilege) LoadDBTable(ctx context.Context) error {
 
 // LoadTablesPrivTable loads the mysql.tables_priv table from database.
 func (p *MySQLPrivilege) LoadTablesPrivTable(ctx context.Context) error {
-	return p.loadTable(ctx, "select * from mysql.tables_priv", p.decodeTablesPrivTableRow)
+	return p.loadTable(ctx, "select * from mysql.tables_priv;", p.decodeTablesPrivTableRow)
 }
 
 // LoadColumnsPrivTable loads the mysql.columns_priv table from database.
 func (p *MySQLPrivilege) LoadColumnsPrivTable(ctx context.Context) error {
-	return p.loadTable(ctx, "select * from mysql.columns_priv", p.decodeColumnsPrivTableRow)
+	return p.loadTable(ctx, "select * from mysql.columns_priv;", p.decodeColumnsPrivTableRow)
+}
+
+type sqlExec interface {
+	Execute(sql string) ([]ast.RecordSet, error)
 }
 
 func (p *MySQLPrivilege) loadTable(ctx context.Context, sql string,
 	decodeTableRow func(*ast.Row, []*ast.ResultField) error) error {
-	rs, err := ctx.(sqlexec.RestrictedSQLExecutor).ExecRestrictedSQL(ctx, sql)
+	tmp, err := ctx.(sqlExec).Execute(sql)
 	if err != nil {
 		return errors.Trace(err)
 	}
+	rs := tmp[0]
 	defer rs.Close()
 
 	fs, err := rs.Fields()
@@ -132,9 +140,11 @@ func (p *MySQLPrivilege) loadTable(ctx context.Context, sql string,
 	for {
 		row, err := rs.Next()
 		if err != nil {
+			fmt.Println("ereroereoarjaklsdjgdaskljglsdjg")
 			return errors.Trace(err)
 		}
 		if row == nil {
+			fmt.Println("break是什么 鬼？")
 			break
 		}
 
@@ -147,6 +157,7 @@ func (p *MySQLPrivilege) loadTable(ctx context.Context, sql string,
 }
 
 func (p *MySQLPrivilege) decodeUserTableRow(row *ast.Row, fs []*ast.ResultField) error {
+	fmt.Println("run here!!")
 	var value userRecord
 	for i, f := range fs {
 		d := row.Data[i]
@@ -164,11 +175,13 @@ func (p *MySQLPrivilege) decodeUserTableRow(row *ast.Row, fs []*ast.ResultField)
 			}
 			priv, ok := mysql.Col2PrivType[f.ColumnAsName.O]
 			if !ok {
+				fmt.Println("我日了狗了")
 				return errInvalidPrivilegeType.Gen("Unknown Privilege Type!")
 			}
 			value.Privileges |= priv
 		}
 	}
+	fmt.Println("load user table row:", value)
 	p.User = append(p.User, value)
 	return nil
 }
@@ -313,6 +326,7 @@ func patternMatch(pattern, str string) bool {
 
 // ConnectionVerification verifies the connection have access to TiDB server.
 func (p *MySQLPrivilege) ConnectionVerification(user, host string) *userRecord {
+	fmt.Println("user = ", p.User)
 	for i := 0; i < len(p.User); i++ {
 		record := &p.User[i]
 		if record.match(user, host) {

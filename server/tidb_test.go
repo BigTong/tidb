@@ -31,7 +31,7 @@ type TidbTestSuite struct {
 var _ = Suite(new(TidbTestSuite))
 
 func (ts *TidbTestSuite) SetUpSuite(c *C) {
-	log.SetLevelByString("error")
+	log.SetLevelByString("debug")
 	store, err := tidb.NewStore("memory:///tmp/tidb")
 	c.Assert(err, IsNil)
 	_, err = tidb.BootstrapSession(store)
